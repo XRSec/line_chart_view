@@ -1,5 +1,6 @@
 <template>
-  <div id="main" ref="main">
+  <div>
+    <div id="main" ref="main"></div>
   </div>
 </template>
 
@@ -14,6 +15,9 @@ export default {
 import {onMounted} from "vue";
 import * as echarts from "echarts";
 import axios from "axios";
+import {createToaster} from "@meforma/vue-toaster";
+
+const toaster = createToaster({position: "top-right", duration: 3000, dismissible: false,});
 
 function getData(num) {
   return axios.get('/api/top', {
@@ -28,13 +32,10 @@ function getData(num) {
 }
 
 let myChart;
-
 // Y轴
 const dataOne = [];
-
 // X轴
 const time = [];
-
 // 图表选项
 let options = {
   title: {text: '网络攻击墙', textStyle: {color: 'black'}},
@@ -68,9 +69,11 @@ let options = {
 };
 
 // 初始化数据
-(async function () {
+const getAll = async function () {
   await getData(288).then(res => {
     console.log("正在初始化数据")
+    time.length = 0
+    dataOne.length = 0
     for (let i = 0; i < res.data.data.length; i++) {
       let timeV1 = new Date(Date.parse(res.data.data[i].Time))
       let timeMonth = (timeV1.getMonth() + 1).toString().padStart(2, '0')
@@ -82,10 +85,13 @@ let options = {
     }
   }).catch(err => {
     console.log(err)
-  })
+    toaster.error("初始化数据失败!")
+  });
+  myChart.hideLoading()
   myChart.setOption(options)
-})()
-
+  toaster.info("加载数据完成!")
+};
+getAll()
 // 更新新数据流
 setInterval(async function () {
   await getData(1).then(res => {
@@ -94,17 +100,24 @@ setInterval(async function () {
     let timeDay = now.getDate().toString().padStart(2, '0')
     let timeHour = now.getHours().toString().padStart(2, '0')
     let timeMinute = now.getMinutes().toString().padStart(2, '0')
-    if (dataOne[dataOne.length-1]!==res.data.data[0].Num){
+    if (dataOne[dataOne.length - 1] !== res.data.data[0].Num) {
       time.push(`${timeMonth}-${timeDay} ${timeHour}:${timeMinute}`)
       dataOne.push(res.data.data[0].Num)
-      }else {
-      console.log("数据重复")
+      toaster.info("更新一条数据!")
+    } else {
+      console.log("无数据更新")
+      return
     }
+    myChart.setOption(options)
   }).catch(err => {
     console.log(err)
+    toaster.error("更新数据失败!")
   });
-  myChart.setOption(options)
 }, 5000)
+
+setInterval(function () {
+  getAll()
+}, 300000)
 
 onMounted(() => {
   // 初始化图表
@@ -116,7 +129,8 @@ onMounted(() => {
   newPromise.then(() => {
     //	此dom为echarts图标展示dom
     myChart = echarts.init(document.getElementById("main"))
-    myChart.setOption(options)
+    myChart.showLoading()
+    toaster.success("初始化完成!")
   })
 })
 </script>
