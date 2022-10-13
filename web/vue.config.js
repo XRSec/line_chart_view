@@ -7,12 +7,12 @@ module.exports = defineConfig({
             entry: "src/main.js",
         },
     },
-    publicPath: process.env.NODE_ENV === 'production' ? '/home/' : '/',
+    publicPath: process.env.NODE_ENV === 'production' ? '/home' : '/',
     devServer: {
         port: 8080,
-        proxy: {
+        proxy: process.env.NODE_ENV === 'production' ? null : {
             '/api': {
-                target: process.env.NODE_ENV === 'production' ? '/' : 'http://localhost:8081',
+                target: 'http://localhost:8081',
                 changeOrigin: true,
             }
         }

@@ -43,7 +43,7 @@ var (
 	DBName    = time.Now().Format("2006-01")
 	Port      string
 	Test      bool
-	Miniter   string
+	Miniter   int
 	Debug     bool
 	Url       string
 	ApiKey    string
@@ -55,7 +55,7 @@ func init() {
 	flag.BoolVar(&Debug, "d", false, "填充数据库")
 	flag.BoolVar(&Test, "t", false, "测试采集")
 	flag.StringVar(&Port, "p", "80", "端口号")
-	flag.StringVar(&Miniter, "m", "12", "运行频率")
+	flag.IntVar(&Miniter, "m", 12, "运行频率")
 	flag.StringVar(&Url, "u", "http://localhost:8080", "API地址")
 	flag.StringVar(&ApiKey, "ak", "123456", "API Key")
 	flag.StringVar(&ApiSecret, "as", "123456", "API Secret")
@@ -98,16 +98,17 @@ func main() {
 
 	r := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
+	cwd, _ := os.Getwd()
+	log.Infof(cwd)
 
 	authorized := r.Group("/", gin.BasicAuth(gin.Accounts{
-		"sbcnm": "woainishabi",
+		"tingzhang": "tingzhang",
 	}))
-	cwd, _ := os.Getwd()
-	authorized.Static("/home", cwd+"/static")
 	authorized.GET("/", func(c *gin.Context) {
 		c.Redirect(302, "/home")
 		c.Abort()
 	})
+	authorized.Static("/home", cwd+"/static")
 	authorized.GET("/api/top", func(c *gin.Context) {
 		var apps []App
 		timeV1 := time.Now().Add(-time.Hour * 24).Format("2006-01-02 15:04")
@@ -122,7 +123,7 @@ func main() {
 
 		if int(numV2) == 288 {
 			view.DB.Table(DBName).Where("time <= ? AND time > ? ", timeV2, timeV1).Order("time DESC").Limit(119).Find(&apps)
-			apps = append(apps[8:]) // 删除第一个数据，然后前端会重新获取
+			apps = append(apps[1:]) // 删除第一个数据，然后前端会重新获取
 			c.JSON(http.StatusOK, gin.H{
 				"data": apps,
 				"code": http.StatusOK,
@@ -203,9 +204,22 @@ func Collect() {
 func populateDB() {
 	log.Info("开始填充数据库")
 	timeTop := time.Now()
+
+	var Hour = 60
+	if Hour%Miniter != 0 {
+		log.Errorf("填充数据失败: 请检查填充数据的频率%v是否能被 60 整除", Miniter)
+		return
+	}
+	var scope []int
+	for i := 0; i <= 60; i++ {
+		if k := i * Miniter; k < 60 {
+			scope = append(scope, k)
+		}
+	}
+
 	for l := timeTop.Add(-time.Hour * 72).Day(); l <= timeTop.Day(); l++ {
 		for i := 0; i < 24; i++ {
-			for _, k := range []int{0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55} {
+			for _, k := range scope {
 				if l == timeTop.Day() && i >= timeTop.Hour() && k > timeTop.Add(time.Minute*5).Minute() {
 					os.Exit(0)
 				}

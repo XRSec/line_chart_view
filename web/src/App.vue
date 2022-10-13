@@ -22,7 +22,7 @@ function getData(num) {
     },
     timeout: 99999,
     headers: {
-      "Authorization": "Basic c2Jjbm06d29haW5pc2hhYmk="
+      "Authorization": "Basic dGluZ3poYW5nOnRpbmd6aGFuZw=="
     },
   })
 }
