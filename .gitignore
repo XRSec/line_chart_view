@@ -1,0 +1,5 @@
+view.zip
+server/static
+server/view.db
+web/node_modules
+!public
